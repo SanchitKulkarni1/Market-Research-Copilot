@@ -1,3 +1,6 @@
+import asyncio
+
+
 from graph.state import ResearchState
 from llm.queryparser import ResearchPlanGenerator
 from tools.serp import run_full_market_research 
@@ -6,6 +9,8 @@ from tools.serp import run_full_market_research
 from cleaners.google_engine import clean_serpapi_google_response
 from cleaners.google_news import clean_google_news
 from cleaners.google_trends import clean_google_trends
+
+from tools.webscrapping import extract_text_async, fallback_missing_link
 
 
 async def parse_query_node(state: ResearchState) -> ResearchState:
@@ -76,5 +81,49 @@ async def clean_data_node(state: ResearchState) -> ResearchState:
             
     except Exception as e:
         state.setdefault("errors", []).append(f"Cleaning Error: {str(e)}")
+
+    return state
+
+
+async def scrape_news_node(state: ResearchState) -> ResearchState:
+    """Takes cleaned news links, scrapes the web content asynchronously, and saves to state."""
+    try:
+        raw_news_items = state.get("news_results", [])
+        
+        # --- THE FIX: FLATTEN THE LIST ---
+        # This guarantees we only have a clean list of dictionaries, 
+        # preventing the 'list object has no attribute get' error.
+        flat_news = []
+        for item in raw_news_items:
+            if isinstance(item, list):
+                flat_news.extend(item)
+            elif isinstance(item, dict):
+                flat_news.append(item)
+        
+        # Build a list of asynchronous scraping tasks
+        tasks = []
+        for news in flat_news:  # <-- We iterate over flat_news now
+            link = news.get("link")
+            if link:
+                tasks.append(extract_text_async(link))
+            else:
+                tasks.append(fallback_missing_link())
+                
+        # Execute all scraping tasks concurrently
+        scraped_contents = await asyncio.gather(*tasks)
+        
+        # --- Keep ONLY title and content ---
+        final_scraped_data = []
+        for news, content in zip(flat_news, scraped_contents):  # <-- zip with flat_news
+            final_scraped_data.append({
+                "title": news.get("title", "Unknown Title"),
+                "content": content[:6000] if content else "No readable text found."
+            })
+            
+        # Store the strictly filtered data in the new state key
+        state["scraped_news"] = final_scraped_data
+        
+    except Exception as e:
+        state.setdefault("errors", []).append(f"Scraping Node Error: {str(e)}")
 
     return state

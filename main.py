@@ -55,7 +55,7 @@ async def main():
     print(json.dumps(final_state.get("google_results", []), indent=2))
 
     print("\n=== CLEANED NEWS RESULTS ===")
-    print(json.dumps(final_state.get("news_results", []), indent=2))
+    print(json.dumps(final_state.get("scraped_news", []), indent=2))
 
     print("\n=== CLEANED TRENDS RESULTS ===")
     print(json.dumps(final_state.get("trends_results", {}), indent=2))

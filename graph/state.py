@@ -18,6 +18,8 @@ class ResearchState(TypedDict):
     news_results: Optional[List[Dict]]
     trends_results: Optional[Dict]
 
+    scraped_news: Optional[List[Dict]]
+
     # Meta
     confidence: Dict[str, str]
     errors: List[str]
