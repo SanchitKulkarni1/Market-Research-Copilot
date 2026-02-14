@@ -1,6 +1,6 @@
 import os
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from google import genai
 from google.genai import types
 import dotenv
@@ -26,8 +26,10 @@ class ParsedQuery(BaseModel):
         ..., description="Comma-separated list of 3-5 products/terms to compare in Google Trends (will be used as single query)"
     )
 
-    @validator('trends_comparison')
-    def validate_trends_comparison(cls, v):
+    # 1. Changed to @field_validator and added @classmethod
+    @field_validator('trends_comparison')
+    @classmethod
+    def validate_trends_comparison(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("trends_comparison cannot be empty")
         
@@ -44,10 +46,13 @@ class ParsedQuery(BaseModel):
         
         return v
 
-    @validator('search_questions', 'news_questions')
-    def validate_non_empty(cls, v, field):
+    # 2. Changed to @field_validator, added @classmethod, and updated signature
+    @field_validator('search_questions', 'news_questions')
+    @classmethod
+    def validate_non_empty(cls, v: List[str], info: ValidationInfo) -> List[str]:
         if any(not q.strip() for q in v):
-            raise ValueError(f"{field.name} contains empty questions")
+            # 3. Changed field.name to info.field_name
+            raise ValueError(f"{info.field_name} contains empty questions")
         return v
 
 
@@ -82,6 +87,10 @@ class ResearchPlanGenerator:
             
             parsed: ParsedQuery = response.parsed
             self._validate_parsed_output(parsed)
+            print("==" *20)
+            print("✅ Successfully generated and the parsed the query:")
+            print(parsed)
+            print("==" *20)
             return parsed
             
         except Exception as e:

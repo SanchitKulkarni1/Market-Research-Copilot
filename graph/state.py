@@ -11,11 +11,12 @@ class ResearchState(TypedDict):
     keywords: List[str]
     search_questions: List[str]
     news_questions: List[str]
-    trends_comparisons: str
+    trends_comparison: str
 
     # Discovery
-    official_site: Optional[str]
-    competitors: List[str]
+    google_results: Optional[List[Dict]]
+    news_results: Optional[List[Dict]]
+    trends_results: Optional[Dict]
 
     # Meta
     confidence: Dict[str, str]

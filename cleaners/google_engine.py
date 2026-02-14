@@ -1,113 +1,114 @@
 import json
-from typing import Dict, Any, List
-from urllib.parse import urlparse
+from typing import Dict, Any, List, Optional
 
 
 MAX_ORGANIC = 5
+MAX_RELATED_QUESTIONS = 5
 
 
 def clean_serpapi_google_response(data: Dict[str, Any]) -> Dict[str, Any]:
-
+    """
+    Extract only the essential content for LLM summarization:
+    - From organic_results: title + snippet
+    - From related_questions: question + snippet
+    """
     cleaned = {}
 
     # --------------------------------
-    # 1. Total Results
+    # Content for LLM (Combined List)
     # --------------------------------
-    search_info = data.get("search_information", {})
-    if search_info.get("total_results"):
-        cleaned["total_results"] = search_info["total_results"]
+    llm_content = []
 
-    # --------------------------------
-    # 2. Organic Results (LIMITED)
-    # --------------------------------
+    # Add organic results (title + snippet)
     organic_results = data.get("organic_results", [])[:MAX_ORGANIC]
-
-    cleaned_organic = []
-    organic_links = []
-    domains = []
-
     for result in organic_results:
-        link = result.get("link")
-        if not link:
-            continue
+        title = result.get("title")
+        snippet = result.get("snippet")
+        
+        if title or snippet:  # Include if at least one is present
+            item = {}
+            
+            if title:
+                item["title"] = title
+            if snippet:
+                item["snippet"] = snippet
+            
+            llm_content.append(item)
 
-        domain = urlparse(link).netloc
+    # Add related questions (question + snippet)
+    related_questions = data.get("related_questions", [])[:MAX_RELATED_QUESTIONS]
+    for q in related_questions:
+        question_text = q.get("question")
+        snippet = q.get("snippet")
+        
+        if not snippet:
+            snippet = extract_ai_snippet(q)
+        
+        if question_text:  # Include if question exists
+            item = {"question": question_text}
+            
+            if snippet:
+                item["snippet"] = snippet
+            
+            llm_content.append(item)
 
-        cleaned_organic.append({
-            "position": result.get("position"),
-            "title": result.get("title"),
-            "snippet": result.get("snippet"),
-            "link": link,
-            "domain": domain
-        })
-
-        organic_links.append(link)
-        domains.append(domain)
-
-    if cleaned_organic:
-        cleaned["organic_results"] = cleaned_organic
-        cleaned["links"] = list(set(organic_links))
-        cleaned["domains"] = list(set(domains))
-
-    # --------------------------------
-    # 3. AI Overview (Flattened)
-    # --------------------------------
-    ai_overview = data.get("ai_overview", {})
-    text_blocks = ai_overview.get("text_blocks", [])
-
-    ai_summary = []
-
-    for block in text_blocks:
-        if block.get("type") == "paragraph":
-            ai_summary.append(block.get("snippet"))
-        elif block.get("type") == "list":
-            for item in block.get("list", []):
-                ai_summary.append(item.get("snippet"))
-
-    if ai_summary:
-        cleaned["ai_overview"] = " ".join(ai_summary)
-
-    # --------------------------------
-    # 4. Related Questions
-    # --------------------------------
-    related_questions = data.get("related_questions", [])
-    cleaned_questions = []
-
-    for q in related_questions[:5]:
-        snippet = q.get("snippet") or extract_ai_snippet(q)
-        cleaned_questions.append({
-            "question": q.get("question"),
-            "snippet": snippet
-        })
-
-    if cleaned_questions:
-        cleaned["related_questions"] = cleaned_questions
-
-    # --------------------------------
-    # 5. Related Searches
-    # --------------------------------
-    related_searches = data.get("related_searches", [])
-    cleaned_searches = [
-        item.get("query")
-        for item in related_searches[:8]
-        if item.get("query")
-    ]
-
-    if cleaned_searches:
-        cleaned["related_searches"] = cleaned_searches
+    if llm_content:
+        cleaned["content"] = llm_content
 
     return cleaned
 
 
-def extract_ai_snippet(question_obj: Dict[str, Any]) -> str:
+def extract_ai_snippet(question_obj: Dict[str, Any]) -> Optional[str]:
+    """Extract snippet from AI-generated text blocks within a question."""
     text_blocks = question_obj.get("text_blocks", [])
     snippets = []
 
     for block in text_blocks:
-        if block.get("type") == "paragraph":
-            snippets.append(block.get("snippet"))
-        elif block.get("type") == "list":
+        block_type = block.get("type")
+        
+        if block_type == "paragraph":
+            snippet = block.get("snippet")
+            if snippet:
+                snippets.append(snippet)
+        elif block_type == "list":
             for item in block.get("list", []):
-                snippets.append(item.get("snippet"))
+                snippet = item.get("snippet")
+                if snippet:
+                    snippets.append(snippet)
 
     return " ".join(snippets) if snippets else None
+
+
+def prepare_llm_prompt(cleaned_data: Dict[str, Any]) -> str:
+    """
+    Convert cleaned data into a formatted prompt for LLM summarization.
+    """
+    content = cleaned_data.get("content", [])
+    
+    if not content:
+        return "No content available for summarization."
+    
+    prompt_parts = []
+    
+    for idx, item in enumerate(content, 1):
+        if "title" in item:
+            # Organic result with title
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            
+            prompt_parts.append(f"{idx}. {title}")
+            if snippet:
+                prompt_parts.append(f"   {snippet}")
+        
+        elif "question" in item:
+            # Related question
+            question = item.get("question", "")
+            snippet = item.get("snippet", "")
+            
+            prompt_parts.append(f"{idx}. Q: {question}")
+            if snippet:
+                prompt_parts.append(f"   A: {snippet}")
+        
+        prompt_parts.append("")  # Empty line between items
+    
+    return "\n".join(prompt_parts)

@@ -1,14 +1,22 @@
 from graph.state import ResearchState
-from llm.queryparser import parse_query
+from llm.queryparser import ResearchPlanGenerator
 from tools.serp import run_full_market_research 
+
+# Import your cleaner functions 
+from cleaners.google_engine import clean_serpapi_google_response
+from cleaners.google_news import clean_google_news
+from cleaners.google_trends import clean_google_trends
+
 
 async def parse_query_node(state: ResearchState) -> ResearchState:
     try:
-        parsed = await parse_query(state["query"])
+        # 2. FIXED: Created an instance of the class and called .generate()
+        plan_generator = ResearchPlanGenerator()
+        parsed = await plan_generator.generate(state["query"])
+        
         state["product_name"] = parsed.product_name
         state["category"] = parsed.category
         
-        # CORRECTED: Matched names to your Pydantic schema
         state["search_questions"] = parsed.search_questions
         state["news_questions"] = parsed.news_questions
         state["trends_comparison"] = parsed.trends_comparison 
@@ -21,15 +29,12 @@ async def parse_query_node(state: ResearchState) -> ResearchState:
 
 class PlanAdapter:
     def __init__(self, state: ResearchState):
-        # CORRECTED: Matched variable names and string defaults
         self.search_questions = state.get("search_questions", [])
         self.news_questions = state.get("news_questions", [])
-        self.trends_comparison = state.get("trends_comparison", "") # Default to string
-
+        self.trends_comparison = state.get("trends_comparison", "") 
 
 
 async def discover_via_serp_node(state: ResearchState) -> ResearchState:
-
     if not state.get("search_questions"):
         state.setdefault("errors", []).append("No search questions generated for Serp discovery")
         return state
@@ -38,11 +43,38 @@ async def discover_via_serp_node(state: ResearchState) -> ResearchState:
         plan = PlanAdapter(state)
         research_results = await run_full_market_research(plan)
         
+        # Storing RAW results first
         state["google_results"] = research_results["google_results"]
         state["news_results"] = research_results["news_results"]
         state["trends_results"] = research_results["trends_results"]
         
     except Exception as e:
         state.setdefault("errors", []).append(f"SerpAPI Error: {str(e)}")
+
+    return state
+
+
+async def clean_data_node(state: ResearchState) -> ResearchState:
+    """Takes the raw API results from the state and overwrites them with cleaned data."""
+    try:
+        # 1. Clean Google Search Results (List of Dicts)
+        cleaned_google = []
+        for raw_google_response in state.get("google_results", []):
+            cleaned_google.append(clean_serpapi_google_response(raw_google_response))
+        state["google_results"] = cleaned_google
+
+        # 2. Clean Google News Results (List of Dicts)
+        cleaned_news = []
+        for raw_news_response in state.get("news_results", []):
+            cleaned_news.append(clean_google_news(raw_news_response, state.get("news_questions", [])))
+        state["news_results"] = cleaned_news
+
+        # 3. Clean Google Trends Results (Single Dict)
+        raw_trends = state.get("trends_results")
+        if raw_trends:
+            state["trends_results"] = clean_google_trends(raw_trends)
+            
+    except Exception as e:
+        state.setdefault("errors", []).append(f"Cleaning Error: {str(e)}")
 
     return state

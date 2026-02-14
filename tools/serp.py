@@ -43,9 +43,12 @@ async def run_news_search(questions: List[str], client: httpx.AsyncClient, sem: 
 # google trends (UPDATED for a single comparison API hit)
 async def run_trends_search(comparison_query: str, client: httpx.AsyncClient, sem: asyncio.Semaphore) -> Dict[str, Any]:
     """Takes a single comma-separated string and makes ONE API call."""
+    if not comparison_query or not comparison_query.strip():
+        print("⚠️ Warning: Trends query is empty. Skipping Trends API call.")
+        return {}
     params = {
         "engine": "google_trends",
-        "q": comparison_query,       # e.g., "Zoom,Microsoft Teams,Google Meet"
+        "q": comparison_query,    # e.g., "Zoom,Microsoft Teams,Google Meet"
         "date": "today 12-m",        # Added the 12-month date parameter from your curl
         "data_type": "TIMESERIES",
         "api_key": SERP_API_KEY
