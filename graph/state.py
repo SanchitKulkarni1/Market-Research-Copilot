@@ -9,6 +9,9 @@ class ResearchState(TypedDict):
     product_name: Optional[str]
     category: Optional[str]
     keywords: List[str]
+    search_questions: List[str]
+    news_questions: List[str]
+    trends_comparisons: str
 
     # Discovery
     official_site: Optional[str]

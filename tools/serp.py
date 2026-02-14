@@ -1,66 +1,78 @@
 import os
-import requests
-from urllib.parse import urlparse
+import httpx
+import asyncio
+from typing import List, Dict, Any
 
 SERP_API_KEY = os.getenv("SERP_API_KEY")
+BASE_URL = "https://serpapi.com/search.json"
 
 
-def extract_domain(url: str) -> str:
-    return urlparse(url).netloc.replace("www.", "").lower()
+async def fetch_serp(params: Dict[str, Any], client: httpx.AsyncClient, sem: asyncio.Semaphore) -> Dict[str, Any]:
+    """Fetches data from SerpApi, using a Semaphore to limit concurrency."""
+    async with sem:
+        response = await client.get(BASE_URL, params=params)
+        response.raise_for_status()
+        return response.json()
 
+# google search
+async def run_google_search(questions: List[str], client: httpx.AsyncClient, sem: asyncio.Semaphore) -> List[Dict]:
+    tasks = []
+    for q in questions:
+        params = {
+            "engine": "google",
+            "q": q,
+            "api_key": SERP_API_KEY
+        }
+        tasks.append(fetch_serp(params, client, sem))
 
-def serp_discover(
-    keywords: list[str],
-    product_name: str,
-    category: str,
-    max_competitors: int = 5,
-):
-    # 🔒 Narrow intent: add category explicitly
-    query = f"{product_name} {category} alternatives"
+    return await asyncio.gather(*tasks)
 
+# google news
+async def run_news_search(questions: List[str], client: httpx.AsyncClient, sem: asyncio.Semaphore) -> List[Dict]:
+    tasks = []
+    for q in questions:
+        params = {
+            "engine": "google_news",
+            "q": q,
+            "api_key": SERP_API_KEY
+        }
+        tasks.append(fetch_serp(params, client, sem))
+
+    return await asyncio.gather(*tasks)
+
+# google trends (UPDATED for a single comparison API hit)
+async def run_trends_search(comparison_query: str, client: httpx.AsyncClient, sem: asyncio.Semaphore) -> Dict[str, Any]:
+    """Takes a single comma-separated string and makes ONE API call."""
     params = {
-        "engine": "google",
-        "q": query,
-        "api_key": SERP_API_KEY,
-        "num": 15,
+        "engine": "google_trends",
+        "q": comparison_query,       # e.g., "Zoom,Microsoft Teams,Google Meet"
+        "date": "today 12-m",        # Added the 12-month date parameter from your curl
+        "data_type": "TIMESERIES",
+        "api_key": SERP_API_KEY
     }
+    
+    # We do not need asyncio.gather here because it's only 1 request
+    return await fetch_serp(params, client, sem)
 
-    res = requests.get("https://serpapi.com/search.json", params=params)
-    res.raise_for_status()
+# --- MAIN EXECUTION PIPELINE ---
 
-    organic = res.json().get("organic_results", [])
-
-    official_site = None
-    competitors: list[str] = []
-    seen_domains = set()
-
-    for r in organic:
-        link = r.get("link")
-        if not link:
-            continue
-
-        domain = extract_domain(link)
-
+async def run_full_market_research(plan) -> Dict[str, Any]:
+    """Runs all research queries concurrently but safely."""
+    
+    MAX_CONCURRENT_REQUESTS = 5
+    sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
         
+        # Gather all the categories matching your updated ParsedQuery schema
+        results = await asyncio.gather(
+            run_google_search(plan.search_questions, client, sem),
+            run_news_search(plan.news_questions, client, sem),
+            run_trends_search(plan.trends_comparison, client, sem), 
+        )
 
-        # ❌ duplicates
-        if domain in seen_domains:
-            continue
-
-        seen_domains.add(domain)
-
-        # ✅ first valid domain → official site
-        if official_site is None:
-            official_site = f"https://{domain}"
-            continue
-
-        # ❌ same product domain variants (zoom.com vs zoom.us)
-        if official_site.replace("https://", "") in domain:
-            continue
-
-        competitors.append(domain)
-
-        if len(competitors) >= max_competitors:
-            break
-
-    return official_site, competitors
+    return {
+        "google_results": results[0],        # List[Dict]
+        "news_results": results[1],          # List[Dict]
+        "trends_results": results[2],        # Dict (Single API response containing the comparison)
+    }
