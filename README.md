@@ -121,18 +121,12 @@ The report JSON contains these sections:
 | Component | Technology |
 |-----------|-----------|
 | Orchestration | [LangGraph](https://github.com/langchain-ai/langgraph) |
-| LLM | [Gemini 2.5 Flash](https://ai.google.dev/) (query parsing + report synthesis) |
+| LLM | [Gemini 3.0 Flash](https://ai.google.dev/) (query parsing + report synthesis) |
 | Search APIs | [SerpAPI](https://serpapi.com/) (Google Search, News, Trends) |
 | Web Scraping | [Trafilatura](https://github.com/adbar/trafilatura) |
 | Frontend | [Streamlit](https://streamlit.io/) |
 | Schema Validation | [Pydantic](https://docs.pydantic.dev/) |
 | HTTP Client | [httpx](https://www.python-httpx.org/) (async) |
-
----
-
-## 📄 License
-
-MIT
 
 ---
 
