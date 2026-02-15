@@ -1,68 +1,93 @@
 import asyncio
 import json
-import time  # 1. Import the time module
+import time
 from graph.graph import build_graph
 
-
 async def main():
+    # Compile the latest graph
     graph = build_graph()
 
+    # Match initial_state to ResearchState definition
     initial_state = {
         "query": "do research for zoom - a video conferencing tool",
         
         "product_name": None,
         "category": None,
         "keywords": [],
-        
         "search_questions": [],
         "news_questions": [],
         "trends_comparison": "",
-        "finance_queries": [],
-
-        "official_site": None,
-        "competitors": [],
 
         "google_results": [],
         "news_results": [],
         "trends_results": {},
-        "finance_results": [],
+        "scraped_news": [],
 
         "confidence": {},
         "errors": [],
+        "report": None
     }
 
-    print("Running market research pipeline... This may take a few seconds.")
+    print("\n" + "="*80)
+    print("🚀 MARKET RESEARCH PIPELINE")
+    print("="*80)
+    print(f"Query: {initial_state['query']}")
+    print("-"*80 + "\n")
     
-    # 2. Start the timer right before invoking the graph
     start_time = time.perf_counter()
     
+    # Run the graph
     final_state = await graph.ainvoke(initial_state)
     
-    # 3. Stop the timer right after the graph finishes
     end_time = time.perf_counter()
-    
-    # 4. Calculate total elapsed time
     elapsed_time = end_time - start_time
 
-    # Print any errors first
+    # 1. Print Errors
     if final_state.get("errors"):
-        print("\n=== ERRORS ===")
-        print(json.dumps(final_state["errors"], indent=2))
-        return
+        print("\n" + "="*80)
+        print("❌ ERRORS")
+        print("="*80)
+        for error in final_state["errors"]:
+            print(f"  • {error}")
+        print("-"*80)
 
-    # Pretty-print the cleaned results
-    print("\n=== CLEANED GOOGLE SEARCH RESULTS ===")
-    print(json.dumps(final_state.get("google_results", []), indent=2))
+    # 2. Handle and Print the Final Report
+    report = final_state.get("report")
+    if report:
+        print("\n" + "="*80)
+        print("📊 FINAL MARKET RESEARCH REPORT")
+        print("="*80 + "\n")
+        
+        # Convert to dict (handle both Pydantic and regular dict)
+        if hasattr(report, 'model_dump'):
+            report_dict = report.model_dump()
+        else:
+            report_dict = report
+        
+        # Pretty print with proper formatting
+        print(json.dumps(report_dict, indent=2))
+        
+        print("\n" + "-"*80)
+        
+        # Save a copy as a file automatically
+        with open("final_report.json", "w") as f:
+            json.dump(report_dict, f, indent=2)
+        print("💾 Report saved to 'final_report.json'")
+        print("-"*80)
+    else:
+        print("\n" + "="*80)
+        print("⚠️  NO REPORT GENERATED")
+        print("="*80)
+        print("Check errors above for details.")
+        print("-"*80)
 
-    print("\n=== CLEANED NEWS RESULTS ===")
-    print(json.dumps(final_state.get("scraped_news", []), indent=2))
-
-    print("\n=== CLEANED TRENDS RESULTS ===")
-    print(json.dumps(final_state.get("trends_results", {}), indent=2))
-
-    # 5. Print the final execution time clearly at the bottom
-    print(f"\n⏱️ Total Pipeline Execution Time: {elapsed_time:.2f} seconds")
-
+    # 3. Execution Summary
+    print("\n" + "="*80)
+    print("⏱️  EXECUTION SUMMARY")
+    print("="*80)
+    print(f"Total Time: {elapsed_time:.2f} seconds")
+    print(f"Status: {'✅ Success' if report else '❌ Failed'}")
+    print("="*80 + "\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

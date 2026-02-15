@@ -1,0 +1,218 @@
+{
+  "executive_summary": {
+    "overview": "Zoom is a comprehensive communication and collaboration platform that has evolved from a video-conferencing tool into an AI-powered 'Workplace' ecosystem. It provides integrated solutions for meetings, team chat, phone, and contact centers, now anchored by its 'agentic' AI Companion.",
+    "market_position": "Market leader in search interest and brand recognition, though currently facing a downward trend in search dominance as it transitions from a pandemic-era utility to an enterprise productivity platform.",
+    "key_strengths": [
+      "AI Companion included at no additional cost for paid plans",
+      "Strong vertical-specific solutions for healthcare and education",
+      "High user experience ratings and ease of use"
+    ],
+    "primary_challenges": [
+      "Intense competition from bundled suites like Microsoft Teams and Google Meet",
+      "Legacy security perceptions and privacy concerns"
+    ],
+    "strategic_recommendation": "Accelerate the transition to 'Agentic AI' and deep vertical integrations to differentiate from generic communication tools and justify standalone seat costs."
+  },
+  "pricing_analysis": {
+    "tiers": [
+      {
+        "name": "Basic",
+        "price_per_user": "Free",
+        "key_features": [
+          "Standard meetings",
+          "Team Chat"
+        ],
+        "participant_limit": 100,
+        "meeting_duration": "40 minutes"
+      },
+      {
+        "name": "Zoom Workplace Pro",
+        "price_per_user": "$13.33/month",
+        "key_features": [
+          "AI Companion",
+          "Cloud storage",
+          "Unlimited meeting time"
+        ],
+        "participant_limit": null,
+        "meeting_duration": "Unlimited"
+      },
+      {
+        "name": "Zoom Workplace Business",
+        "price_per_user": "$18.32/month",
+        "key_features": [
+          "SSO",
+          "Managed domains",
+          "AI Companion"
+        ],
+        "participant_limit": null,
+        "meeting_duration": "Unlimited"
+      },
+      {
+        "name": "Zoom Workplace Business Plus",
+        "price_per_user": "$22.49/month",
+        "key_features": [
+          "Zoom Phone",
+          "Workspace Reservation"
+        ],
+        "participant_limit": null,
+        "meeting_duration": "Unlimited"
+      }
+    ],
+    "value_proposition": "Positions itself as a high-value productivity platform where advanced AI features are included without extra licensing fees ('AI is free').",
+    "competitive_positioning": "Mid-market to Premium",
+    "key_differentiators": [
+      "Bundled AI Companion",
+      "Flexible Phone add-ons ($10-$15/user)",
+      "Specialized Event and Webinar tiers"
+    ]
+  },
+  "competitive_landscape": {
+    "main_competitors": [
+      {
+        "name": "Microsoft Teams",
+        "market_position": "Leader",
+        "key_advantages": [
+          "Deep Office 365 integration",
+          "Upward search trend (12.0 latest)"
+        ],
+        "weaknesses": [
+          "Complex UI",
+          "Heavy resource consumption"
+        ],
+        "search_interest_score": 11.91
+      },
+      {
+        "name": "Google Meet",
+        "market_position": "Challenger",
+        "key_advantages": [
+          "Browser-based simplicity",
+          "Google Workspace integration"
+        ],
+        "weaknesses": [
+          "Limited advanced features compared to Zoom"
+        ],
+        "search_interest_score": 23.79
+      },
+      {
+        "name": "Slack",
+        "market_position": "Challenger",
+        "key_advantages": [
+          "Superior messaging UX",
+          "Salesforce ecosystem"
+        ],
+        "weaknesses": [
+          "Weaker native video capabilities"
+        ],
+        "search_interest_score": 15.85
+      }
+    ],
+    "market_leader": "Zoom (by search volume)",
+    "competitive_advantages": [
+      "Platform neutrality (integrates with both Google and Microsoft)",
+      "Superior video quality and reliability",
+      "Rapid AI feature deployment"
+    ],
+    "competitive_threats": [
+      "Ecosystem lock-in from Microsoft 365",
+      "Return-to-office mandates reducing total addressable market"
+    ],
+    "switching_drivers": {
+      "Choose Zoom": "Ease of use and superior AI meeting summaries",
+      "Switch away": "Consolidation into existing Microsoft/Google enterprise agreements"
+    }
+  },
+  "product_intelligence": {
+    "core_capabilities": [
+      {
+        "category": "AI & Automation",
+        "features": [
+          "AI Companion 3.0",
+          "Agentic retrieval",
+          "Meeting skip suggestions"
+        ],
+        "competitive_edge": "Proactive, context-aware support across multiple platforms (Google/Microsoft)."
+      },
+      {
+        "category": "Vertical Solutions",
+        "features": [
+          "Healthcare EHR integration",
+          "LMS integrations for Education"
+        ],
+        "competitive_edge": "Purpose-built workflows for specialized sectors rather than generic tools."
+      }
+    ],
+    "unique_differentiators": [
+      "Photorealistic AI avatars",
+      "Real-time voice translation",
+      "Cross-platform meeting note retrieval"
+    ],
+    "integration_ecosystem": [
+      "Salesforce",
+      "ServiceNow",
+      "Epic/Cerner (Healthcare)",
+      "Canvas/Blackboard (Education)"
+    ],
+    "limitations": [
+      "40-minute limit on free tier",
+      "Historical security reputation issues",
+      "Bandwidth intensity for high-res features"
+    ]
+  },
+  "recent_developments": [
+    {
+      "category": "Product Launch",
+      "title": "AI Companion 3.0",
+      "description": "Shift from passive assistance to 'Agentic AI' capable of executing workflows and cross-platform data retrieval.",
+      "impact": "Establishes Zoom as a modern productivity platform rather than just a video tool.",
+      "date": "2024-09-17"
+    },
+    {
+      "category": "Partnership",
+      "title": "Expanded CX Integrations",
+      "description": "Deeper integrations of Zoom Contact Center with Salesforce and ServiceNow.",
+      "impact": "Strengthens Zoom's position in the Customer Experience (CX) and Contact Center market.",
+      "date": "2024-09-17"
+    }
+  ],
+  "market_trends": {
+    "search_trend": "declining",
+    "market_momentum": "Transitioning from explosive growth to steady enterprise refinement and vertical specialization.",
+    "growth_indicators": [
+      "Increased adoption of AI Companion features",
+      "Expansion into Contact Center (CX) markets"
+    ],
+    "risk_indicators": [
+      "Downward search interest trend (from 100 max to 87 latest)",
+      "Competition from 'free' bundled alternatives"
+    ]
+  },
+  "strategic_insights": {
+    "strengths": [
+      "Market-leading search interest (84.49 average)",
+      "Rapid innovation cycle in AI",
+      "Strong brand equity in video communication"
+    ],
+    "weaknesses": [
+      "Declining search momentum",
+      "Perceived as a 'point solution' compared to full office suites"
+    ],
+    "opportunities": [
+      "Monetizing specialized vertical workflows (Healthcare/Education)",
+      "Replacing legacy PBX systems with Zoom Phone",
+      "Agentic AI to automate administrative tasks"
+    ],
+    "threats": [
+      "Microsoft Teams' upward trend in search interest",
+      "Security/Privacy skepticism from enterprise IT leaders",
+      "Economic pressure leading to vendor consolidation"
+    ],
+    "recommendations": [
+      "Aggressively market the 'AI is included' value proposition to counter Microsoft Copilot's extra costs.",
+      "Deepen hardware partnerships to secure the hybrid office environment.",
+      "Focus on 'Agentic AI' to move from meeting facilitation to task execution."
+    ]
+  },
+  "product_name": "Zoom",
+  "category": "Video Conferencing",
+  "report_date": "2026-02-15"
+}

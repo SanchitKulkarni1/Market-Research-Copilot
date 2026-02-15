@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Optional
+from typing import TypedDict, List, Dict, Optional, Any
 
 
 class ResearchState(TypedDict):
@@ -19,6 +19,7 @@ class ResearchState(TypedDict):
     trends_results: Optional[Dict]
 
     scraped_news: Optional[List[Dict]]
+    report: Optional[Dict[str, Any]]  # Changed from MarketResearchReport to Dict
 
     # Meta
     confidence: Dict[str, str]

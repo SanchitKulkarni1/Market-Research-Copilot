@@ -11,6 +11,7 @@ from cleaners.google_news import clean_google_news
 from cleaners.google_trends import clean_google_trends
 
 from tools.webscrapping import extract_text_async, fallback_missing_link
+from llm.research_copilot import MarketResearchSynthesizer
 
 
 async def parse_query_node(state: ResearchState) -> ResearchState:
@@ -125,5 +126,52 @@ async def scrape_news_node(state: ResearchState) -> ResearchState:
         
     except Exception as e:
         state.setdefault("errors", []).append(f"Scraping Node Error: {str(e)}")
+
+    return state
+
+
+async def generate_report_node(state: ResearchState) -> ResearchState:
+    """
+    Final node that synthesizes all research data into a structured 
+    Market Research Report using Gemini 2.0.
+    """
+    # 1. Check for prerequisite data
+    if not state.get("scraped_news") and not state.get("google_results"):
+        state.setdefault("errors", []).append("Insufficient data to generate a report.")
+        return state
+
+    try:
+        # 2. Initialize the Synthesizer
+        # Make sure GOOGLE_API_KEY is in your environment or passed here
+        synthesizer = MarketResearchSynthesizer()
+
+        # 3. Gather data from state
+        product_name = state.get("product_name") or "Target Product"
+        category = state.get("category") or "SaaS"
+        
+        # Pulling the processed data buckets
+        search_results = state.get("google_results", [])
+        scraped_news = state.get("scraped_news", []) # This contains the title and content
+        trends_results = state.get("trends_results", {})
+
+        # 4. Generate the structured report
+        # Note: The generate_report method is async in the class definition provided
+        report = await synthesizer.generate_report(
+            product_name=product_name,
+            category=category,
+            search_results=search_results,
+            scraped_news=scraped_news,
+            trends_results=trends_results
+        )
+
+        # 5. Store the final report back in the state
+        # You might need to add 'report: MarketResearchReport' to your TypedDict ResearchState
+        state["report"] = report
+        
+        # Optional: Log success for debugging
+        print(f"Successfully generated market research report for {product_name}")
+
+    except Exception as e:
+        state.setdefault("errors", []).append(f"Report Generation Error: {str(e)}")
 
     return state

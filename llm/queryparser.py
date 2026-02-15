@@ -75,7 +75,7 @@ class ResearchPlanGenerator:
         
         try:
             response = await self.client.aio.models.generate_content(
-                model="gemini-flash-latest",  # Updated to latest model
+                model="gemini-2.5-flash",  # Updated to latest model
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.3,
