@@ -1,26 +1,35 @@
-from typing import TypedDict, List, Dict, Optional, Any
+from typing import TypedDict, Optional, List, Dict, Any
 
 
 class ResearchState(TypedDict):
-    # Raw input
+    # Input
     query: str
-
-    # Parsed idea
+    
+    # Plan (from parse_query)
     product_name: Optional[str]
     category: Optional[str]
-    keywords: List[str]
-    search_questions: List[str]
-    news_questions: List[str]
-    trends_comparison: str
-
-    # Discovery
-    google_results: Optional[List[Dict]]
-    news_results: Optional[List[Dict]]
-    trends_results: Optional[Dict]
-
-    scraped_news: Optional[List[Dict]]
-    report: Optional[Dict[str, Any]]  # Changed from MarketResearchReport to Dict
-
-    # Meta
-    confidence: Dict[str, str]
-    errors: List[str]
+    keywords: Optional[List[str]]
+    search_questions: Optional[List[str]]
+    news_questions: Optional[List[str]]
+    trends_comparison: Optional[str]
+    
+    # Tool Results (from discover_serp)
+    google_results: Optional[List[Any]]
+    news_results: Optional[List[Any]]
+    trends_results: Optional[Dict[str, Any]]
+    
+    # Scraped Content (from scrape_news)
+    scraped_news: Optional[List[Dict[str, str]]]
+    
+    # Final Output (from generate_report)
+    report: Optional[Dict[str, Any]]
+    
+    # Evaluation Results (from evaluate_report) ✅ NEW
+    metrics: Optional[Dict[str, Any]]
+    run_id: Optional[str]
+    eval_latency: Optional[float]
+    
+    # Metadata
+    execution_log: Optional[List[Dict[str, Any]]]
+    confidence: Optional[Dict[str, Any]]
+    errors: Optional[List[str]]

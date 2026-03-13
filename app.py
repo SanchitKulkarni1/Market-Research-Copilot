@@ -263,7 +263,7 @@ st.markdown("""
 
 
 # ─────────────────────────────────────────────────────────────
-# STAGE DEFINITIONS
+# STAGE DEFINITIONS (4 STAGES NOW)
 # ─────────────────────────────────────────────────────────────
 STAGES = [
     {
@@ -284,19 +284,24 @@ STAGES = [
         "desc": "Synthesizing all data into a structured market research report via Gemini",
         "nodes": ["generate_report"],
     },
+    {
+        "icon": "🧪",
+        "title": "Evaluator",
+        "desc": "Running DeepEval metrics: Business Quality, Task Completion, Argument Correctness, Tool Correctness, Step Efficiency, Plan Adherence",
+        "nodes": ["evaluate_report"],
+    },
 ]
 
 
 def render_stage_cards(statuses: dict):
-    """Render the 3 stage cards with current statuses."""
-    cols = st.columns(3, gap="large")
+    """Render the 4 stage cards with current statuses."""
+    cols = st.columns(4, gap="large")
     for i, (col, stage) in enumerate(zip(cols, STAGES)):
         status = statuses.get(stage["title"], "waiting")
         card_cls = "active" if status == "running" else ("done" if status == "done" else "")
         badge_cls = f"badge-{status}"
         badge_label = {"waiting": "⏳ WAITING", "running": "🔄 RUNNING", "done": "✅ COMPLETE"}[status]
 
-        # Arrow connector between cards
         with col:
             st.markdown(f"""
             <div class="stage-card {card_cls}">
@@ -583,8 +588,7 @@ def render_full_report(report: dict):
 async def run_pipeline(query: str):
     """
     Run the LangGraph pipeline with stage-wise progress tracking.
-    Uses st.status() expanders for each stage and updates a
-    placeholder for the stage-card visualization.
+    The graph now handles ALL nodes including evaluation.
     """
     graph = build_graph()
 
@@ -600,148 +604,101 @@ async def run_pipeline(query: str):
         "news_results": [],
         "trends_results": {},
         "scraped_news": [],
+        "execution_log": [],
         "confidence": {},
         "errors": [],
         "report": None,
+        "metrics": None,
+        "run_id": None,
+        "eval_latency": None,
     }
 
-    # We'll track which stage we're in based on node callbacks
-    stage_statuses = {"Planner": "waiting", "Executor": "waiting", "Summarizer": "waiting"}
-    node_to_stage = {}
-    for stage in STAGES:
-        for node in stage["nodes"]:
-            node_to_stage[node] = stage["title"]
+    # Track all 4 stages
+    stage_statuses = {"Planner": "waiting", "Executor": "waiting", "Summarizer": "waiting", "Evaluator": "waiting"}
 
     # Stage cards placeholder
     cards_placeholder = st.empty()
     with cards_placeholder.container():
         render_stage_cards(stage_statuses)
 
-    # Detailed progress area
+    # Progress area
     progress_area = st.container()
 
     start_time = time.perf_counter()
 
-    # ── Stage 1: Planner ──
-    stage_statuses["Planner"] = "running"
-    with cards_placeholder.container():
-        render_stage_cards(stage_statuses)
-
+    # ── Run the ENTIRE graph at once ──
     with progress_area:
-        with st.status("🧠 **Planner** — Analyzing your query...", expanded=True) as planner_status:
-            st.write("Extracting product name and category...")
-            st.write("Generating targeted search questions for Google Search, News & Trends...")
+        with st.status("🚀 **Running Market Research Pipeline**...", expanded=True) as pipeline_status:
+            st.write("🧠 Stage 1: Planning and parsing query...")
+            stage_statuses["Planner"] = "running"
+            with cards_placeholder.container():
+                render_stage_cards(stage_statuses)
+            
+            st.write("⚙️ Stage 2: Executing search, news, and trends queries...")
+            stage_statuses["Planner"] = "done"
+            stage_statuses["Executor"] = "running"
+            with cards_placeholder.container():
+                render_stage_cards(stage_statuses)
+            
+            st.write("📊 Stage 3: Generating comprehensive report...")
+            stage_statuses["Executor"] = "done"
+            stage_statuses["Summarizer"] = "running"
+            with cards_placeholder.container():
+                render_stage_cards(stage_statuses)
+            
+            st.write("🧪 Stage 4: Running evaluation metrics...")
+            stage_statuses["Summarizer"] = "done"
+            stage_statuses["Evaluator"] = "running"
+            with cards_placeholder.container():
+                render_stage_cards(stage_statuses)
+            
+            # THIS IS THE KEY: Let the graph run all nodes
+            final_state = await graph.ainvoke(initial_state)
+            
+            st.write("✅ Pipeline complete!")
+            pipeline_status.update(label="🚀 **Pipeline Complete**", state="complete", expanded=False)
 
-            # Run parse_query
-            try:
-                from graph.nodes import parse_query_node
-                initial_state = await parse_query_node(initial_state)
-            except Exception as e:
-                initial_state.setdefault("errors", []).append(str(e))
-
-            if initial_state.get("product_name"):
-                st.write(f"✅ Product identified: **{initial_state['product_name']}**")
-            if initial_state.get("category"):
-                st.write(f"✅ Category: **{initial_state['category']}**")
-            if initial_state.get("search_questions"):
-                st.write(f"✅ Generated **{len(initial_state['search_questions'])}** search questions")
-            if initial_state.get("news_questions"):
-                st.write(f"✅ Generated **{len(initial_state['news_questions'])}** news queries")
-
-            planner_status.update(label="🧠 **Planner** — Complete", state="complete", expanded=False)
-
-    stage_statuses["Planner"] = "done"
-    with cards_placeholder.container():
-        render_stage_cards(stage_statuses)
-
-    # ── Stage 2: Executor ──
-    stage_statuses["Executor"] = "running"
-    with cards_placeholder.container():
-        render_stage_cards(stage_statuses)
-
-    with progress_area:
-        with st.status("⚙️ **Executor** — Collecting market data...", expanded=True) as executor_status:
-            # discover_serp
-            st.write("🔍 Querying Google Search, News & Trends APIs...")
-            try:
-                from graph.nodes import discover_via_serp_node
-                initial_state = await discover_via_serp_node(initial_state)
-            except Exception as e:
-                initial_state.setdefault("errors", []).append(str(e))
-
-            google_count = len(initial_state.get("google_results", []))
-            news_count = len(initial_state.get("news_results", []))
-            st.write(f"✅ Retrieved **{google_count}** search results, **{news_count}** news results")
-
-            # clean_data
-            st.write("🧹 Cleaning and structuring raw API data...")
-            try:
-                from graph.nodes import clean_data_node
-                initial_state = await clean_data_node(initial_state)
-            except Exception as e:
-                initial_state.setdefault("errors", []).append(str(e))
-            st.write("✅ Data cleaned and normalized")
-
-            # scrape_news
-            st.write("🌐 Scraping full article content from news sources...")
-            try:
-                from graph.nodes import scrape_news_node
-                initial_state = await scrape_news_node(initial_state)
-            except Exception as e:
-                initial_state.setdefault("errors", []).append(str(e))
-
-            scraped_count = len(initial_state.get("scraped_news", []))
-            st.write(f"✅ Scraped **{scraped_count}** full articles")
-
-            executor_status.update(label="⚙️ **Executor** — Complete", state="complete", expanded=False)
-
-    stage_statuses["Executor"] = "done"
-    with cards_placeholder.container():
-        render_stage_cards(stage_statuses)
-
-    # ── Stage 3: Summarizer ──
-    stage_statuses["Summarizer"] = "running"
-    with cards_placeholder.container():
-        render_stage_cards(stage_statuses)
-
-    with progress_area:
-        with st.status("📊 **Summarizer** — Generating market research report...", expanded=True) as summarizer_status:
-            st.write("Sending all collected data to Gemini for synthesis...")
-            st.write("Generating: Executive Summary, Pricing, Competitors, Product Intelligence, Trends, SWOT...")
-
-            try:
-                from graph.nodes import generate_report_node
-                initial_state = await generate_report_node(initial_state)
-            except Exception as e:
-                initial_state.setdefault("errors", []).append(str(e))
-
-            if initial_state.get("report"):
-                st.write("✅ Comprehensive market research report generated!")
-            else:
-                st.write("⚠️ Report generation encountered issues.")
-
-            summarizer_status.update(label="📊 **Summarizer** — Complete", state="complete", expanded=False)
-
-    stage_statuses["Summarizer"] = "done"
+    # Mark all stages as done
+    for stage in STAGES:
+        stage_statuses[stage["title"]] = "done"
+    
     with cards_placeholder.container():
         render_stage_cards(stage_statuses)
 
     elapsed = time.perf_counter() - start_time
 
+    # ── Extract results from final state ──
+    metrics = final_state.get("metrics")
+    eval_latency = final_state.get("eval_latency", 0)
+    
+    # Debug logging
+    print(f"\n🔍 DEBUG - Final State Keys: {final_state.keys()}")
+    print(f"🔍 DEBUG - Metrics: {metrics}")
+    print(f"🔍 DEBUG - Eval Latency: {eval_latency}")
+    print(f"🔍 DEBUG - Run ID: {final_state.get('run_id')}")
+
     # ── Execution summary ──
     with progress_area:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("⏱ Total Time", f"{elapsed:.1f}s")
-        c2.metric("📄 Status", "✅ Success" if initial_state.get("report") else "❌ Failed")
-        c3.metric("⚠️ Errors", len(initial_state.get("errors", [])))
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("⏱ Pipeline Time", f"{elapsed:.1f}s")
+        if metrics and eval_latency:
+            c2.metric("⏱ Eval Time", f"{eval_latency:.1f}s")
+        else:
+            c2.metric("⏱ Eval Time", "N/A")
+            if not metrics:
+                st.error(f"⚠️ Metrics not found in state. Available keys: {list(final_state.keys())}")
+        c3.metric("📄 Status", "✅ Success" if final_state.get("report") else "❌ Failed")
+        c4.metric("⚠️ Errors", len(final_state.get("errors", [])))
 
     # Save report
-    report = initial_state.get("report")
+    report = final_state.get("report")
     if report:
+        if hasattr(report, "model_dump"):
+            report = report.model_dump()
         with open("final_report.json", "w") as f:
             json.dump(report, f, indent=2)
 
-    return initial_state
+    return final_state
 
 
 # ─────────────────────────────────────────────────────────────
@@ -768,31 +725,98 @@ if run_clicked and query:
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
     report = final_state.get("report")
+    metrics = final_state.get("metrics")
+    
+    # Serialize report if needed
+    if report and hasattr(report, "model_dump"):
+        report = report.model_dump()
+    
     if report:
-        render_full_report(report)
+        # Create Tabs
+        tab_report, tab_metrics = st.tabs(["📊 Research Report", "📈 Evaluation Metrics"])
+        
+        with tab_report:
+            render_full_report(report)
 
-        # Download buttons
-        c1, c2 = st.columns(2)
-        with c1:
-            st.download_button(
-                "📥 Download JSON Report",
-                data=json.dumps(report, indent=2),
-                file_name="market_research_report.json",
-                mime="application/json",
-                use_container_width=True,
-            )
-        with c2:
-            # Generate markdown for download
-            from llm.research_copilot import MarketResearchSynthesizer
-            synth = MarketResearchSynthesizer()
-            md_content = synth._generate_markdown(report)
-            st.download_button(
-                "📥 Download Markdown Report",
-                data=md_content,
-                file_name="market_research_report.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
+            # Download buttons
+            c1, c2 = st.columns(2)
+            with c1:
+                st.download_button(
+                    "📥 Download JSON Report",
+                    data=json.dumps(report, indent=2),
+                    file_name="market_research_report.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+            with c2:
+                # Generate markdown for download
+                try:
+                    from llm.research_copilot import MarketResearchSynthesizer
+                    synth = MarketResearchSynthesizer()
+                    md_content = synth._generate_markdown(report)
+                    st.download_button(
+                        "📥 Download Markdown Report",
+                        data=md_content,
+                        file_name="market_research_report.md",
+                        mime="text/markdown",
+                        use_container_width=True,
+                    )
+                except Exception as e:
+                    st.caption(f"Markdown generation unavailable: {e}")
+                
+        with tab_metrics:
+            st.markdown("### DeepEval Performance Metrics")
+            if metrics:
+                # Top metrics row
+                col1, col2, col3 = st.columns(3)
+                
+                def get_metric_color(score):
+                    if score >= 0.7: return "metric-green"
+                    if score >= 0.4: return "metric-orange"
+                    return "metric-red"
+                    
+                def render_metric_card(container, title, key, icon):
+                    data = metrics.get(key, {})
+                    score = data.get("score", 0)
+                    reason = data.get("reason", "N/A")
+                    color_cls = get_metric_color(score)
+                    
+                    container.markdown(f"""
+                    <div class="swot-card" style="border-top: 3px solid var(--border); margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin:0;">{icon} {title}</h4>
+                            <span class="metric-badge {color_cls}" style="font-size: 1.1rem;">{score:.2f}</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.8rem; line-height: 1.4;">
+                            {reason}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Render 6 metrics
+                render_metric_card(col1, "Business Quality", "business_quality", "💼")
+                render_metric_card(col2, "Task Completion", "task_completion", "✅")
+                render_metric_card(col3, "Argument Correctness", "argument_correctness", "⚖️")
+                
+                col4, col5, col6 = st.columns(3)
+                render_metric_card(col4, "Tool Correctness", "tool_correctness", "⚙️")
+                render_metric_card(col5, "Step Efficiency", "step_efficiency", "⚡")
+                render_metric_card(col6, "Plan Adherence", "plan_adherence", "📋")
+                
+                st.markdown("### Pipeline Execution Latency")
+                
+                exec_log = final_state.get("execution_log", [])
+                if exec_log:
+                    for log in exec_log:
+                        node = log.get("node", "Unknown")
+                        lat = log.get("latency_seconds", 0)
+                        st.markdown(f"**{node}**: `{lat:.2f}s`")
+                else:
+                    st.caption("No execution logs found.")
+                    
+            else:
+                st.warning("⚠️ Metrics were not generated for this run.")
+                
     else:
         st.error("❌ Failed to generate report. Check errors above for details.")
 

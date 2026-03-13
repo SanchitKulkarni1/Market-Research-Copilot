@@ -3,91 +3,99 @@ import json
 import time
 from graph.graph import build_graph
 
+
 async def main():
-    # Compile the latest graph
+    query = "do research for zoom - a video conferencing tool"
+
+    print("\n" + "=" * 60)
+    print("🚀 Starting Market Research Pipeline")
+    print("=" * 60)
+    print(f"Query: {query}\n")
+
+    # Build graph
     graph = build_graph()
 
-    # Match initial_state to ResearchState definition
+    # Initial state
     initial_state = {
-        "query": "do research for zoom - a video conferencing tool",
-        
+        "query": query,
         "product_name": None,
         "category": None,
         "keywords": [],
         "search_questions": [],
         "news_questions": [],
         "trends_comparison": "",
-
         "google_results": [],
         "news_results": [],
         "trends_results": {},
         "scraped_news": [],
-
+        "execution_log": [],
         "confidence": {},
         "errors": [],
-        "report": None
+        "report": None,
+        "metrics": None,
+        "run_id": None,
+        "eval_latency": None,
     }
 
-    print("\n" + "="*80)
-    print("🚀 MARKET RESEARCH PIPELINE")
-    print("="*80)
-    print(f"Query: {initial_state['query']}")
-    print("-"*80 + "\n")
-    
+    # Run the entire graph (includes evaluation)
     start_time = time.perf_counter()
-    
-    # Run the graph
     final_state = await graph.ainvoke(initial_state)
-    
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
+    total_latency = time.perf_counter() - start_time
 
-    # 1. Print Errors
-    if final_state.get("errors"):
-        print("\n" + "="*80)
-        print("❌ ERRORS")
-        print("="*80)
-        for error in final_state["errors"]:
-            print(f"  • {error}")
-        print("-"*80)
-
-    # 2. Handle and Print the Final Report
+    # Extract results
     report = final_state.get("report")
-    if report:
-        print("\n" + "="*80)
-        print("📊 FINAL MARKET RESEARCH REPORT")
-        print("="*80 + "\n")
-        
-        # Convert to dict (handle both Pydantic and regular dict)
-        if hasattr(report, 'model_dump'):
-            report_dict = report.model_dump()
-        else:
-            report_dict = report
-        
-        # Pretty print with proper formatting
-        print(json.dumps(report_dict, indent=2))
-        
-        print("\n" + "-"*80)
-        
-        # Save a copy as a file automatically
-        with open("final_report.json", "w") as f:
-            json.dump(report_dict, f, indent=2)
-        print("💾 Report saved to 'final_report.json'")
-        print("-"*80)
-    else:
-        print("\n" + "="*80)
-        print("⚠️  NO REPORT GENERATED")
-        print("="*80)
-        print("Check errors above for details.")
-        print("-"*80)
+    metrics = final_state.get("metrics")
+    eval_latency = final_state.get("eval_latency", 0)
+    run_id = final_state.get("run_id")
+    errors = final_state.get("errors", [])
 
-    # 3. Execution Summary
-    print("\n" + "="*80)
-    print("⏱️  EXECUTION SUMMARY")
-    print("="*80)
-    print(f"Total Time: {elapsed_time:.2f} seconds")
-    print(f"Status: {'✅ Success' if report else '❌ Failed'}")
-    print("="*80 + "\n")
+    # Display execution log
+    print("\n" + "=" * 60)
+    print("📋 Execution Log")
+    print("=" * 60)
+    for log in final_state.get("execution_log", []):
+        node = log.get("node", "Unknown")
+        lat = log.get("latency_seconds", 0)
+        print(f"  {node:25s} → {lat:.2f}s")
+
+    # Display metrics
+    if metrics:
+        print("\n" + "=" * 60)
+        print("📊 Evaluation Metrics")
+        print("=" * 60)
+        print(json.dumps(metrics, indent=2))
+        print(f"\n  Evaluation Time: {eval_latency:.2f}s")
+        print(f"  Run ID: {run_id}")
+    else:
+        print("\n⚠️  No metrics generated")
+
+    # Display report
+    if report:
+        report_dict = report.model_dump() if hasattr(report, "model_dump") else report
+        print("\n" + "=" * 60)
+        print("📊 FINAL REPORT")
+        print("=" * 60)
+        print(json.dumps(report_dict, indent=2))
+    else:
+        print("\n⚠️  No report generated")
+
+    # Display errors
+    if errors:
+        print("\n" + "=" * 60)
+        print("⚠️  ERRORS")
+        print("=" * 60)
+        for err in errors:
+            print(f"  - {err}")
+
+    # Summary
+    print("\n" + "=" * 60)
+    print("✅ Pipeline Complete")
+    print("=" * 60)
+    print(f"  Total Time: {total_latency:.2f}s")
+    print(f"  Status: {'✅ Success' if report else '❌ Failed'}")
+    print(f"  Errors: {len(errors)}")
+    print("=" * 60 + "\n")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
